@@ -102,6 +102,20 @@ public extension Instruction {
             return .resume(.next, [next])
         }
     }
+
+    static func lookup<Key>(_ table: [Key: [Instruction]], key: @escaping (Value) -> Key) -> Instruction
+        where Key: Hashable
+    {
+        return Instruction { value in
+            guard
+                let value = value,
+                let instructions = table[key(value)]
+            else {
+                return .end
+            }
+            return .resume(.current, instructions)
+        }
+    }
 }
 
 
@@ -113,25 +127,6 @@ public extension Instruction where Value: Equatable {
                 return .end
             }
             return .resume(.next, [next])
-        }
-    }
-}
-
-
-public  extension Instruction where Value: Hashable {
-
-    static func lookup<Key>(
-        _ table: [Key: [Instruction]],
-        key: @escaping (Value) -> Key
-    ) -> Instruction {
-        return Instruction { value in
-            guard
-                let value = value,
-                let instructions = table[key(value)]
-            else {
-                return .end
-            }
-            return .resume(.current, instructions)
         }
     }
 }
