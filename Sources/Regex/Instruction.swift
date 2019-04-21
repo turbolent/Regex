@@ -18,7 +18,7 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
     case match(Matcher, Instruction)
     case skip(Instruction)
     case atEnd(Instruction)
-    case lookup(Keyer, [AnyHashable: Instruction])
+    case lookup(Keyer, [Keyer.Key: Instruction])
 
     public enum Location {
         case next
@@ -151,6 +151,15 @@ public extension Instruction
 
 
 public extension Instruction
+    where Keyer == HashableKeyer<Value>
+{
+    static func lookup(_ table: [Keyer.Value: Instruction]) -> Instruction {
+        return .lookup(HashableKeyer(), table)
+    }
+}
+
+
+public extension Instruction
     where Keyer == AnyHashableKeyer<Value>
 {
     static func lookup(_ table: [AnyHashable: Instruction]) -> Instruction {
@@ -160,5 +169,10 @@ public extension Instruction
 
 
 public typealias HashableInstruction<Value, Result> =
+    Instruction<Value, EquatableMatcher<Value>, HashableKeyer<Value>, Result>
+    where Value: Hashable
+
+
+public typealias AnyHashableInstruction<Value, Result> =
     Instruction<Value, EquatableMatcher<Value>, AnyHashableKeyer<Value>, Result>
     where Value: Hashable

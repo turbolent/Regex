@@ -51,9 +51,8 @@ extension TokenMatcher: Hashable {}
 public struct TokenKeyer: Keyer {
     public let tokenLabel: String
 
-    public func key(for token: Token) -> AnyHashable {
-        let value = token.value(forTokenLabel: tokenLabel)
-        return AnyHashable(value)
+    public func key(for token: Token) -> String {
+        return token.value(forTokenLabel: tokenLabel)
     }
 }
 
@@ -315,7 +314,7 @@ public func compile<S, Result>(instructions: S)
                         equalityMatches.map {
                             (
                                 // key: matched value
-                                AnyHashable($0.value),
+                                $0.value,
                                 // value: next instructions (initially one, merged)
                                 [$0.next]
                             )

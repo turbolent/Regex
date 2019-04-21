@@ -69,8 +69,8 @@ final class RegexTests: XCTestCase {
         let pattern = HashableInstruction.atom("a",
               .lookup(
                 [
-                    AnyHashable("b"): .skip(.atom("c", .atEnd(.accept(1)))),
-                    AnyHashable("x"): .skip(.atom("y", .accept(2)))
+                    "b": .skip(.atom("c", .atEnd(.accept(1)))),
+                    "x": .skip(.atom("y", .accept(2)))
                 ]
             )
         )
