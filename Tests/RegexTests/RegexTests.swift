@@ -2,15 +2,15 @@ import XCTest
 import Regex
 
 final class RegexTests: XCTestCase {
-    
+
     func testAtom() {
         XCTAssertEqual(
-            Instruction.atom("a", .accept(1))
+            HashableInstruction.atom("a", .accept(1))
                 .match(["a"]),
             1
         )
 
-        let pattern = Instruction.atom("a", .atom("b", .accept(1)))
+        let pattern = HashableInstruction.atom("a", .atom("b", .accept(1)))
 
         XCTAssertEqual(
             pattern.match(["a", "b"]),
@@ -30,7 +30,7 @@ final class RegexTests: XCTestCase {
 
     func testSplit() {
         let pattern =
-            Instruction.atom("a", .split([
+            HashableInstruction.atom("a", .split([
                 .atom("b", .accept(1)),
                 .atom("c", .accept(2))
             ]))
@@ -53,26 +53,25 @@ final class RegexTests: XCTestCase {
 
     func testAtEnd() {
         XCTAssertEqual(
-            Instruction.atom("a", .atom("b", .atEnd(.accept(1))))
+            HashableInstruction.atom("a", .atom("b", .atEnd(.accept(1))))
                 .match(["a", "b", "c"]),
             nil
         )
 
         XCTAssertEqual(
-            Instruction.atom("a", .atom("b", .atom("c", .atEnd(.accept(1)))))
+            HashableInstruction.atom("a", .atom("b", .atom("c", .atEnd(.accept(1)))))
                 .match(["a", "b", "c"]),
             1
         )
     }
 
     func testLookup() {
-        let pattern = Instruction.atom("a",
+        let pattern = HashableInstruction.atom("a",
               .lookup(
                 [
-                    "B": [.skip(.atom("c", .atEnd(.accept(1))))],
-                    "X": [.skip(.atom("y", .accept(2)))]
-                ],
-                key: { $0.uppercased() }
+                    AnyHashable("b"): .skip(.atom("c", .atEnd(.accept(1)))),
+                    AnyHashable("x"): .skip(.atom("y", .accept(2)))
+                ]
             )
         )
 

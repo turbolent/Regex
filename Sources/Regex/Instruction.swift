@@ -8,7 +8,17 @@ import Foundation
 /// (see http://swtch.com/~rsc/regexp/regexp2.html), generalized to arbitrary instructions,
 /// based on simple effects
 ///
-public final class Instruction<Value, Result> {
+public indirect enum Instruction<Value, Matcher, Keyer, Result>
+    where Matcher: Regex.Matcher, Matcher.Value == Value,
+        Keyer: Regex.Keyer, Keyer.Value == Value
+{
+    case end
+    case accept(Result)
+    case split([Instruction])
+    case match(Matcher, Instruction)
+    case skip(Instruction)
+    case atEnd(Instruction)
+    case lookup(Keyer, [AnyHashable: Instruction])
 
     public enum Location {
         case next
@@ -21,10 +31,52 @@ public final class Instruction<Value, Result> {
         case end
     }
 
-    public let evaluate: (Value?) -> Effect
+    public init(instructions: [Instruction]) {
+        if instructions.isEmpty {
+            self = .end
+            return
+        }
 
-    public init(evaluate: @escaping (Value?) -> Effect) {
-        self.evaluate = evaluate
+        if let instruction = instructions.first, instructions.count == 1 {
+            self = instruction
+            return
+        }
+
+        self = .split(instructions)
+    }
+
+    public func evaluate(value: Value?) -> Effect {
+        switch self {
+        case .end:
+            return .end
+        case let .accept(result):
+            return .result(result)
+        case let .match(matcher, next):
+            guard
+                let value = value,
+                matcher.match(value: value)
+            else {
+                return .end
+            }
+            return .resume(.current, [next])
+        case let .lookup(keyer, table):
+            guard
+                let value = value,
+                let instruction = table[keyer.key(for: value)]
+            else {
+                return .end
+            }
+            return .resume(.current, [instruction])
+        case let .split(instructions):
+            return .resume(.current, instructions)
+        case let .atEnd(next):
+            guard value == nil else {
+                return .end
+            }
+            return .resume(.current, [next])
+        case let .skip(next):
+            return .resume(.next, [next])
+        }
     }
 
     public func match<S: Sequence>(_ values: S) -> Result? where S.Element == Value {
@@ -49,7 +101,7 @@ public final class Instruction<Value, Result> {
                 defer { threadIndex += 1 }
                 let instruction = currentThreads[threadIndex]
 
-                switch instruction.evaluate(value) {
+                switch instruction.evaluate(value: value) {
                 case let .resume(.next, instructions):
                     newThreads.append(contentsOf: instructions)
                 case let .resume(.current, instructions):
@@ -74,59 +126,39 @@ public final class Instruction<Value, Result> {
 }
 
 
-public extension Instruction {
-
-    static func accept(_ result: Result) -> Instruction {
-        return Instruction { _
-            in .result(result)
-        }
-    }
-
-    static func split(_ instructions: [Instruction]) -> Instruction {
-        return Instruction { _ in
-            .resume(.current, instructions)
-        }
-    }
-
-    static func atEnd(_ next: Instruction) -> Instruction {
-        return Instruction { value in
-            guard value == nil else {
-                return .end
-            }
-            return .resume(.current, [next])
-        }
-    }
-
-    static func skip(_ next: Instruction) -> Instruction {
-        return Instruction { value in
-            return .resume(.next, [next])
-        }
-    }
-
-    static func lookup<Key>(_ table: [Key: [Instruction]], key: @escaping (Value) -> Key) -> Instruction
-        where Key: Hashable
-    {
-        return Instruction { value in
-            guard
-                let value = value,
-                let instructions = table[key(value)]
-            else {
-                return .end
-            }
-            return .resume(.current, instructions)
-        }
-    }
-}
 
 
-public extension Instruction where Value: Equatable {
+extension Instruction: Equatable
+    where Matcher: Equatable,
+        Keyer: Equatable,
+        Result: Equatable {}
 
+
+extension Instruction: Hashable
+    where Matcher: Hashable,
+        Keyer: Hashable,
+        Result: Hashable {}
+
+
+public extension Instruction
+    where Value: Equatable,
+    Matcher == EquatableMatcher<Value>
+{
     static func atom(_ expected: Value, _ next: Instruction) -> Instruction {
-        return Instruction { value in
-            guard value == expected else {
-                return .end
-            }
-            return .resume(.next, [next])
-        }
+        return .match(EquatableMatcher(expected: expected), .skip(next))
     }
 }
+
+
+public extension Instruction
+    where Keyer == AnyHashableKeyer<Value>
+{
+    static func lookup(_ table: [AnyHashable: Instruction]) -> Instruction {
+        return .lookup(AnyHashableKeyer(), table)
+    }
+}
+
+
+public typealias HashableInstruction<Value, Result> =
+    Instruction<Value, EquatableMatcher<Value>, AnyHashableKeyer<Value>, Result>
+    where Value: Hashable
