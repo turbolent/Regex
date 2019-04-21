@@ -7,6 +7,7 @@ extension PatternsTests {
     // to regenerate.
     static let __allTests__PatternsTests = [
         ("testCompilation", testCompilation),
+        ("testLookupCompilation", testLookupCompilation),
     ]
 }
 
