@@ -79,8 +79,9 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
         }
     }
 
-    public func match<S: Sequence>(_ values: S) -> Result? where S.Element == Value {
-
+    public func match<S: Sequence>(_ values: S) -> [Result]
+        where S.Element == Value
+    {
         var currentThreads: [Instruction] = []
         var newThreads: [Instruction] = []
 
@@ -95,6 +96,8 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
             let value = nextValue
             nextValue = valueIterator.next()
 
+            var results: [Result] = []
+
             // NOTE: can't use for-loop, as additions to currentThreads in body should be observed
             var threadIndex = 0
             while threadIndex < currentThreads.count {
@@ -107,21 +110,25 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
                 case let .resume(.current, instructions):
                     currentThreads.append(contentsOf: instructions)
                 case let .result(result):
-                    return result
+                    results.append(result)
                 case .end:
                     break
                 }
             }
 
+            if !results.isEmpty {
+                return results
+            }
+
             if value == nil {
-                return nil
+                return []
             }
 
             swap(&currentThreads, &newThreads)
             newThreads.removeAll()
         }
 
-        return nil
+        return []
     }
 }
 

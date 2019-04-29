@@ -288,23 +288,23 @@ func flattenSplits<S, Result>(_ instructions: S) -> [TokenInstruction<Result>]
 
 
 public func compile<S, Result>(instructions: S)
-    -> TokenInstruction<[Result]>
+    -> TokenInstruction<Result>
     where S: Sequence,
-        S.Element == TokenInstruction<[Result]>,
+        S.Element == TokenInstruction<Result>,
         Result: Hashable
 {
-    var results: [Result] = []
-    var equalityMatches: OrderedSet<TokenEqualityMatch<[Result]>> = []
-    var otherMatches: OrderedSet<TokenMatch<[Result]>> = []
-    var skipNextInstructions: OrderedSet<TokenInstruction<[Result]>> = []
-    var atEndNextInstructions: OrderedSet<TokenInstruction<[Result]>> = []
+    var newInstructions: [TokenInstruction<Result>] = []
+    var equalityMatches: OrderedSet<TokenEqualityMatch<Result>> = []
+    var otherMatches: OrderedSet<TokenMatch<Result>> = []
+    var skipNextInstructions: OrderedSet<TokenInstruction<Result>> = []
+    var atEndNextInstructions: OrderedSet<TokenInstruction<Result>> = []
 
     for instruction in flattenSplits(instructions) {
         switch instruction {
         case .end:
             continue
-        case let .accept(moreResults):
-            results.append(contentsOf: moreResults)
+        case .accept:
+            newInstructions.append(instruction)
         case .split:
             fatalError("unreachable: should have been handled by flattenSplits")
         case let .match(matcher, next):
@@ -331,9 +331,9 @@ public func compile<S, Result>(instructions: S)
         }
     }
 
-    var newInstructions  =
+    newInstructions.append(contentsOf:
         Dictionary(grouping: equalityMatches) { $0.label }
-            .map { entry -> TokenInstruction<[Result]> in
+            .map { entry -> TokenInstruction<Result> in
                 let (label, equalityMatches) = entry
                 let table =
                     Dictionary(
@@ -358,16 +358,11 @@ public func compile<S, Result>(instructions: S)
                     table
                 )
             }
+    )
 
     for match in otherMatches {
         newInstructions.append(
             .match(match.matcher, compile(instructions: [match.next]))
-        )
-    }
-
-    if !results.isEmpty {
-        newInstructions.append(
-            .accept(results)
         )
     }
 

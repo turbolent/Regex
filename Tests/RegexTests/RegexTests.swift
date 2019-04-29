@@ -7,24 +7,24 @@ final class RegexTests: XCTestCase {
         XCTAssertEqual(
             HashableInstruction.atom("a", .accept(1))
                 .match(["a"]),
-            1
+            [1]
         )
 
         let pattern = HashableInstruction.atom("a", .atom("b", .accept(1)))
 
         XCTAssertEqual(
             pattern.match(["a", "b"]),
-            1
+            [1]
         )
 
         XCTAssertEqual(
             pattern.match(["a"]),
-            nil
+            []
         )
 
         XCTAssertEqual(
             pattern.match(["a", "b", "c"]),
-            1
+            [1]
         )
     }
 
@@ -37,17 +37,17 @@ final class RegexTests: XCTestCase {
 
         XCTAssertEqual(
             pattern.match(["a"]),
-            nil
+            []
         )
 
         XCTAssertEqual(
             pattern.match(["a", "b"]),
-            1
+            [1]
         )
 
         XCTAssertEqual(
             pattern.match(["a", "c"]),
-            2
+            [2]
         )
     }
 
@@ -55,13 +55,13 @@ final class RegexTests: XCTestCase {
         XCTAssertEqual(
             HashableInstruction.atom("a", .atom("b", .atEnd(.accept(1))))
                 .match(["a", "b", "c"]),
-            nil
+            []
         )
 
         XCTAssertEqual(
             HashableInstruction.atom("a", .atom("b", .atom("c", .atEnd(.accept(1)))))
                 .match(["a", "b", "c"]),
-            1
+            [1]
         )
     }
 
@@ -77,17 +77,33 @@ final class RegexTests: XCTestCase {
 
         XCTAssertEqual(
             pattern.match(["a"]),
-            nil
+            []
         )
 
         XCTAssertEqual(
             pattern.match(["a", "b", "c"]),
-            1
+            [1]
         )
 
         XCTAssertEqual(
             pattern.match(["a", "x", "y"]),
-            2
+            [2]
+        )
+    }
+
+    func testMultipleResults() {
+        let pattern = HashableInstruction.split([
+            .atom("a", .accept(1)),
+            .atom("a", .accept(2)),
+            .split([
+                .atom("a", .accept(3)),
+                .atom("a", .accept(4))
+            ])
+        ])
+
+        XCTAssertEqual(
+            pattern.match(["a"]),
+            [1, 2, 3, 4]
         )
     }
 }
