@@ -64,25 +64,25 @@ final class PatternsTests: XCTestCase {
         ]
 
         let instructions =
-            try patterns.enumerated().map { entry -> TokenInstruction<Int> in
+            try patterns.enumerated().map { entry -> TokenInstruction<[Int]> in
                 let (offset, pattern) = entry
-                return try pattern.compile(result: offset, checkEnd: true)
+                return try pattern.compile(result: [offset], checkEnd: true)
             }
 
         let instruction = compile(instructions: instructions)
 
         XCTAssertEqual(instruction.match([]), nil)
         XCTAssertEqual(instruction.match(["foo"]), nil)
-        XCTAssertEqual(instruction.match(["foo", "bar"]), 0)
-        // NOTE: duplicate is ignored
-        XCTAssertEqual(instruction.match(["foo", "baz"]), 1)
-        XCTAssertEqual(instruction.match(["foo", "bar", "baz"]), 3)
+        XCTAssertEqual(instruction.match(["foo", "bar"]), [0])
+        // NOTE: multiple results
+        XCTAssertEqual(instruction.match(["foo", "baz"]), [1, 4])
+        XCTAssertEqual(instruction.match(["foo", "bar", "baz"]), [3])
         XCTAssertEqual(instruction.match(["foo", "bar", "baz", "x"]), nil)
-        XCTAssertEqual(instruction.match(["foo", "qux"]), 5)
-        XCTAssertEqual(instruction.match(["bar", "qux"]), 5)
-        XCTAssertEqual(instruction.match(["qux", "foo"]), 6)
-        XCTAssertEqual(instruction.match(["qux", "baz", "foo"]), 6)
-        XCTAssertEqual(instruction.match(["qux", "baz", "bar", "foo"]), 6)
-        XCTAssertEqual(instruction.match(["qux", "baz"]), 7)
+        XCTAssertEqual(instruction.match(["foo", "qux"]), [5])
+        XCTAssertEqual(instruction.match(["bar", "qux"]), [5])
+        XCTAssertEqual(instruction.match(["qux", "foo"]), [6])
+        XCTAssertEqual(instruction.match(["qux", "baz", "foo"]), [6])
+        XCTAssertEqual(instruction.match(["qux", "baz", "bar", "foo"]), [6])
+        XCTAssertEqual(instruction.match(["qux", "baz"]), [7])
     }
 }

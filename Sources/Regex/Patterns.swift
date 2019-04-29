@@ -242,19 +242,33 @@ public extension LabelCondition {
 }
 
 
-struct EqualityMatch<Result> {
+struct TokenEqualityMatch<Result> {
     let label: String
     let value: String
     let next: TokenInstruction<Result>
 }
 
 
-extension EqualityMatch: Equatable
+extension TokenEqualityMatch: Equatable
     where Result: Equatable {}
 
 
-extension EqualityMatch: Hashable
+extension TokenEqualityMatch: Hashable
     where Result: Hashable {}
+
+
+struct TokenMatch<Result> {
+    let matcher: TokenMatcher
+    let next: TokenInstruction<Result>
+}
+
+extension TokenMatch: Equatable
+    where Result: Equatable {}
+
+
+extension TokenMatch: Hashable
+    where Result: Hashable {}
+
 
 
 func flattenSplits<S, Result>(_ instructions: S) -> [TokenInstruction<Result>]
@@ -274,40 +288,52 @@ func flattenSplits<S, Result>(_ instructions: S) -> [TokenInstruction<Result>]
 
 
 public func compile<S, Result>(instructions: S)
-    -> TokenInstruction<Result>
+    -> TokenInstruction<[Result]>
     where S: Sequence,
-        S.Element == TokenInstruction<Result>,
+        S.Element == TokenInstruction<[Result]>,
         Result: Hashable
 {
-    var otherInstructions: OrderedSet<TokenInstruction<Result>> = []
-    var equalityMatches: OrderedSet<EqualityMatch<Result>> = []
-    var skipNextInstructions: OrderedSet<TokenInstruction<Result>> = []
+    var results: [Result] = []
+    var equalityMatches: OrderedSet<TokenEqualityMatch<[Result]>> = []
+    var otherMatches: OrderedSet<TokenMatch<[Result]>> = []
+    var skipNextInstructions: OrderedSet<TokenInstruction<[Result]>> = []
+    var atEndNextInstructions: OrderedSet<TokenInstruction<[Result]>> = []
 
     for instruction in flattenSplits(instructions) {
-        if
-            case let .match(matcher, next) = instruction,
-            case .isEqualTo = matcher.condition.op
-        {
-            let equalityMatch = EqualityMatch(
-                label: matcher.condition.label,
-                value: matcher.condition.input,
-                next: next
-            )
-            equalityMatches.append(equalityMatch)
+        switch instruction {
+        case .end:
             continue
-        }
-
-        if case let .skip(next) = instruction {
+        case let .accept(moreResults):
+            results.append(contentsOf: moreResults)
+        case .split:
+            fatalError("unreachable: should have been handled by flattenSplits")
+        case let .match(matcher, next):
+            if case .isEqualTo = matcher.condition.op {
+                let equalityMatch = TokenEqualityMatch(
+                    label: matcher.condition.label,
+                    value: matcher.condition.input,
+                    next: next
+                )
+                equalityMatches.append(equalityMatch)
+            } else {
+                let tokenMatch = TokenMatch(
+                    matcher: matcher,
+                    next: next
+                )
+                otherMatches.append(tokenMatch)
+            }
+        case let .skip(next):
             skipNextInstructions.append(next)
-            continue
+        case let .atEnd(next):
+            atEndNextInstructions.append(next)
+        case .lookup:
+            fatalError("TODO")
         }
-
-        otherInstructions.append(instruction)
     }
 
-    let lookupEqualityMatchingInstructions =
+    var newInstructions  =
         Dictionary(grouping: equalityMatches) { $0.label }
-            .map { entry -> TokenInstruction<Result> in
+            .map { entry -> TokenInstruction<[Result]> in
                 let (label, equalityMatches) = entry
                 let table =
                     Dictionary(
@@ -333,16 +359,29 @@ public func compile<S, Result>(instructions: S)
                 )
             }
 
-    let skipInstructions: [TokenInstruction<Result>]
-    if skipNextInstructions.isEmpty {
-        skipInstructions = []
-    } else {
-        skipInstructions = [.skip(.split(Array(skipNextInstructions)))]
+    for match in otherMatches {
+        newInstructions.append(
+            .match(match.matcher, compile(instructions: [match.next]))
+        )
     }
 
-    return Instruction(instructions:
-        lookupEqualityMatchingInstructions
-            + skipInstructions
-            + otherInstructions
-    )
+    if !results.isEmpty {
+        newInstructions.append(
+            .accept(results)
+        )
+    }
+
+    if !skipNextInstructions.isEmpty {
+        newInstructions.append(
+            .skip(compile(instructions: skipNextInstructions))
+        )
+    }
+
+    if !atEndNextInstructions.isEmpty {
+        newInstructions.append(
+            .atEnd(compile(instructions: atEndNextInstructions))
+        )
+    }
+
+    return Instruction(instructions: newInstructions)
 }
