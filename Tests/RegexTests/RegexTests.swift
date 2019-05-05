@@ -95,15 +95,22 @@ final class RegexTests: XCTestCase {
         let pattern = HashableInstruction.split([
             .atom("a", .accept(1)),
             .atom("a", .accept(2)),
+            .atom("a", .atom("b", .accept(3))),
             .split([
-                .atom("a", .accept(3)),
-                .atom("a", .accept(4))
+                .atom("a", .accept(4)),
+                .atom("a", .accept(5))
             ])
         ])
 
+        // NOTE: greedy by default
         XCTAssertEqual(
-            pattern.match(["a"]),
-            [1, 2, 3, 4]
+            Set(pattern.match(["a", "b"])),
+            Set([1, 2, 3, 4, 5])
+        )
+
+        XCTAssertEqual(
+            Set(pattern.match(["a", "b"], greedy: false)),
+            Set([1, 2, 4, 5])
         )
     }
 }
