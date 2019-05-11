@@ -12,7 +12,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/turbolent/ParserDescription.git", from: "0.6.0"),
-        .package(url: "https://github.com/Weebly/OrderedSet.git", from: "4.0.0"),
+        .package(url: "https://github.com/turbolent/OrderedSet.git", from: "0.1.0"),
     ],
     targets: [
         .target(

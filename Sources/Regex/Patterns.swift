@@ -314,18 +314,18 @@ public func compile<S, Result>(instructions: S)
                     value: matcher.condition.input,
                     next: next
                 )
-                equalityMatches.append(equalityMatch)
+                equalityMatches.insert(equalityMatch)
             } else {
                 let tokenMatch = TokenMatch(
                     matcher: matcher,
                     next: next
                 )
-                otherMatches.append(tokenMatch)
+                otherMatches.insert(tokenMatch)
             }
         case let .skip(next):
-            skipNextInstructions.append(next)
+            skipNextInstructions.insert(next)
         case let .atEnd(next):
-            atEndNextInstructions.append(next)
+            atEndNextInstructions.insert(next)
         case .lookup:
             fatalError("TODO")
         }
