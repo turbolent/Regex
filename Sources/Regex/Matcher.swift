@@ -4,7 +4,9 @@ public protocol Matcher {
 }
 
 
-public struct EquatableMatcher<T>: Matcher where T: Equatable {
+public struct EquatableMatcher<T>: Matcher
+    where T: Equatable
+{
     public let expected: T
 
     public init(expected: T) {

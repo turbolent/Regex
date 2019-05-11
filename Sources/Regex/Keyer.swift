@@ -6,16 +6,18 @@ public protocol Keyer {
 }
 
 
-public struct HashableKeyer<T>: Keyer where T: Hashable {
-
+public struct HashableKeyer<T>: Keyer
+    where T: Hashable
+{
     public func key(for value: T) -> T {
         return value
     }
 }
 
 
-public struct AnyHashableKeyer<T>: Keyer where T: Hashable {
-
+public struct AnyHashableKeyer<T>: Keyer
+    where T: Hashable
+{
     public func key(for value: T) -> AnyHashable {
         return AnyHashable(value)
     }

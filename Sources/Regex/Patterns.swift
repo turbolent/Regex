@@ -21,15 +21,16 @@ public protocol Token {
 }
 
 
-public struct TokenMatcher: Matcher {
-
+public struct TokenMatcher<T>: Matcher
+    where T: Token
+{
     public let condition: LabelCondition
 
     public init(condition: LabelCondition) {
         self.condition = condition
     }
 
-    public func match(value: Token) -> Bool {
+    public func match(value: T) -> Bool {
         let matchedValue = value.value(forTokenLabel: condition.label)
         switch condition.op {
         case .isEqualTo:
@@ -48,10 +49,12 @@ public struct TokenMatcher: Matcher {
 extension TokenMatcher: Hashable {}
 
 
-public struct TokenKeyer: Keyer {
+public struct TokenKeyer<T>: Keyer
+    where T: Token
+{
     public let tokenLabel: String
 
-    public func key(for token: Token) -> String {
+    public func key(for token: T) -> String {
         return token.value(forTokenLabel: tokenLabel)
     }
 }
@@ -60,16 +63,18 @@ public struct TokenKeyer: Keyer {
 extension TokenKeyer: Hashable {}
 
 
-public typealias TokenInstruction<Result> =
-    Instruction<Token, TokenMatcher, TokenKeyer, Result>
+public typealias TokenInstruction<T, Result> =
+    Instruction<T, TokenMatcher<T>, TokenKeyer<T>, Result>
+    where T: Token
 
 
 public extension _Pattern {
 
-    func compile<Result>(result: Result, checkEnd: Bool = false)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(tokenType: T.Type, result: Result, checkEnd: Bool = false)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
-        var next: TokenInstruction<Result> = .accept(result)
+        var next: TokenInstruction<T, Result> = .accept(result)
         if checkEnd {
             next = .atEnd(next)
         }
@@ -77,8 +82,9 @@ public extension _Pattern {
     }
 
     // NOTE: no support for CapturePattern yet, RepetitionPattern only with min = 0, max = 1
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         switch self {
         case let pattern as SequencePattern:
@@ -100,8 +106,9 @@ public extension _Pattern {
 
 public extension AnyPattern {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return try pattern.compile(next: next)
     }
@@ -110,8 +117,9 @@ public extension AnyPattern {
 
 public extension SequencePattern {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return try patterns
             .reversed()
@@ -124,8 +132,9 @@ public extension SequencePattern {
 
 public extension OrPattern {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return .split(
             try patterns.map { pattern in
@@ -138,8 +147,9 @@ public extension OrPattern {
 
 public extension RepetitionPattern {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         let instruction = try pattern.compile(next: next)
         switch (min, max) {
@@ -157,8 +167,9 @@ public extension RepetitionPattern {
 
 public extension TokenPattern {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         guard let condition = condition else {
             return .skip(next)
@@ -175,8 +186,9 @@ public struct UnsupportedConditionError: Error {
 
 public extension _Condition {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         switch self {
         case let condition as AndCondition:
@@ -196,8 +208,9 @@ public extension _Condition {
 
 public extension AnyCondition {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return try condition.compile(next: next)
     }
@@ -206,8 +219,9 @@ public extension AnyCondition {
 
 public extension AndCondition {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return try conditions
             .reversed()
@@ -220,8 +234,9 @@ public extension AndCondition {
 
 public extension OrCondition {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return .split(
             try conditions.map { condition in
@@ -234,18 +249,19 @@ public extension OrCondition {
 
 public extension LabelCondition {
 
-    func compile<Result>(next: TokenInstruction<Result>)
-        throws -> TokenInstruction<Result>
+    func compile<T, Result>(next: TokenInstruction<T, Result>)
+        throws -> TokenInstruction<T, Result>
+        where T: Token
     {
         return .match(TokenMatcher(condition: self), next)
     }
 }
 
 
-struct TokenEqualityMatch<Result> {
+struct TokenEqualityMatch<T, Result> where T: Token {
     let label: String
     let value: String
-    let next: TokenInstruction<Result>
+    let next: TokenInstruction<T, Result>
 }
 
 
@@ -257,9 +273,11 @@ extension TokenEqualityMatch: Hashable
     where Result: Hashable {}
 
 
-struct TokenMatch<Result> {
-    let matcher: TokenMatcher
-    let next: TokenInstruction<Result>
+struct TokenMatch<T, Result>
+    where T: Token
+{
+    let matcher: TokenMatcher<T>
+    let next: TokenInstruction<T, Result>
 }
 
 extension TokenMatch: Equatable
@@ -271,11 +289,12 @@ extension TokenMatch: Hashable
 
 
 
-func flattenSplits<S, Result>(_ instructions: S) -> [TokenInstruction<Result>]
+func flattenSplits<S, T, Result>(_ instructions: S) -> [TokenInstruction<T, Result>]
     where S: Sequence,
-    S.Element == TokenInstruction<Result>
+        S.Element == TokenInstruction<T, Result>,
+        T: Token
 {
-    var result: [TokenInstruction<Result>] = []
+    var result: [TokenInstruction<T, Result>] = []
     for instruction in instructions {
         if case let .split(nestedInstructions) = instruction {
             result.append(contentsOf: flattenSplits(nestedInstructions))
@@ -287,17 +306,18 @@ func flattenSplits<S, Result>(_ instructions: S) -> [TokenInstruction<Result>]
 }
 
 
-public func compile<S, Result>(instructions: S)
-    -> TokenInstruction<Result>
+public func compile<S, T, Result>(instructions: S)
+    -> TokenInstruction<T, Result>
     where S: Sequence,
-        S.Element == TokenInstruction<Result>,
+        S.Element == TokenInstruction<T, Result>,
+        T: Token,
         Result: Hashable
 {
-    var newInstructions: [TokenInstruction<Result>] = []
-    var equalityMatches: OrderedSet<TokenEqualityMatch<Result>> = []
-    var otherMatches: OrderedSet<TokenMatch<Result>> = []
-    var skipNextInstructions: OrderedSet<TokenInstruction<Result>> = []
-    var atEndNextInstructions: OrderedSet<TokenInstruction<Result>> = []
+    var newInstructions: [TokenInstruction<T, Result>] = []
+    var equalityMatches: OrderedSet<TokenEqualityMatch<T, Result>> = []
+    var otherMatches: OrderedSet<TokenMatch<T, Result>> = []
+    var skipNextInstructions: OrderedSet<TokenInstruction<T, Result>> = []
+    var atEndNextInstructions: OrderedSet<TokenInstruction<T, Result>> = []
 
     for instruction in flattenSplits(instructions) {
         switch instruction {
@@ -333,7 +353,7 @@ public func compile<S, Result>(instructions: S)
 
     newInstructions.append(contentsOf:
         Dictionary(grouping: equalityMatches) { $0.label }
-            .map { entry -> TokenInstruction<Result> in
+            .map { entry -> TokenInstruction<T, Result> in
                 let (label, equalityMatches) = entry
                 let table =
                     Dictionary(

@@ -28,7 +28,7 @@ final class PatternsTests: XCTestCase {
         let pattern = fooPattern ~ barPattern.opt() ~ bazPattern
 
         let instruction =
-            try pattern.compile(result: true, checkEnd: true)
+            try pattern.compile(tokenType: String.self, result: true, checkEnd: true)
 
         XCTAssertEqual(instruction.match([]), [])
         XCTAssertEqual(instruction.match(["foo"]), [])
@@ -64,9 +64,9 @@ final class PatternsTests: XCTestCase {
         ]
 
         let instructions =
-            try patterns.enumerated().map { entry -> TokenInstruction<Int> in
+            try patterns.enumerated().map { entry -> TokenInstruction<String, Int> in
                 let (offset, pattern) = entry
-                return try pattern.compile(result: offset, checkEnd: true)
+                return try pattern.compile(tokenType: String.self, result: offset, checkEnd: true)
             }
 
         let instruction = compile(instructions: instructions)
