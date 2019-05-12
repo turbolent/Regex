@@ -30,11 +30,30 @@ final class PatternsTests: XCTestCase {
         let instruction =
             try pattern.compile(tokenType: String.self, result: true, checkEnd: true)
 
-        XCTAssertEqual(instruction.match([]), [])
-        XCTAssertEqual(instruction.match(["foo"]), [])
-        XCTAssertEqual(instruction.match(["foo", "baz"]), [true])
-        XCTAssertEqual(instruction.match(["foo", "bar", "baz"]), [true])
-        XCTAssertEqual(instruction.match(["foo", "bar", "baz", "x"]), [])
+        XCTAssertEqual(
+            instruction.match([]),
+            []
+        )
+
+        XCTAssertEqual(
+            instruction.match(["foo"]),
+            []
+        )
+
+        XCTAssertEqual(
+            instruction.match(["foo", "baz"]),
+            [MatchResult(result: true, length: 2)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["foo", "bar", "baz"]),
+            [MatchResult(result: true, length: 3)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["foo", "bar", "baz", "x"]),
+            []
+        )
     }
 
     func testLookupCompilation() throws {
@@ -72,17 +91,58 @@ final class PatternsTests: XCTestCase {
         let instruction = compile(instructions: instructions)
 
         XCTAssertEqual(instruction.match([]), [])
+
         XCTAssertEqual(instruction.match(["foo"]), [])
-        XCTAssertEqual(instruction.match(["foo", "bar"]), [0])
+
+        XCTAssertEqual(
+            instruction.match(["foo", "bar"]),
+            [MatchResult(result: 0, length: 2)]
+        )
+
         // NOTE: multiple results
-        XCTAssertEqual(instruction.match(["foo", "baz"]), [1, 4])
-        XCTAssertEqual(instruction.match(["foo", "bar", "baz"]), [3])
+        XCTAssertEqual(
+            instruction.match(["foo", "baz"]),
+            [
+                MatchResult(result: 1, length: 2),
+                MatchResult(result: 4, length: 2)
+            ]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["foo", "bar", "baz"]),
+            [MatchResult(result: 3, length: 3)]
+        )
+
         XCTAssertEqual(instruction.match(["foo", "bar", "baz", "x"]), [])
-        XCTAssertEqual(instruction.match(["foo", "qux"]), [5])
-        XCTAssertEqual(instruction.match(["bar", "qux"]), [5])
-        XCTAssertEqual(instruction.match(["qux", "foo"]), [6])
-        XCTAssertEqual(instruction.match(["qux", "baz", "foo"]), [6])
-        XCTAssertEqual(instruction.match(["qux", "baz", "bar", "foo"]), [6])
-        XCTAssertEqual(instruction.match(["qux", "baz"]), [7])
+
+        XCTAssertEqual(
+            instruction.match(["foo", "qux"]),
+            [MatchResult(result: 5, length: 2)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["bar", "qux"]),
+            [MatchResult(result: 5, length: 2)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["qux", "foo"]),
+            [MatchResult(result: 6, length: 2)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["qux", "baz", "foo"]),
+            [MatchResult(result: 6, length: 3)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["qux", "baz", "bar", "foo"]),
+            [MatchResult(result: 6, length: 4)]
+        )
+
+        XCTAssertEqual(
+            instruction.match(["qux", "baz"]),
+            [MatchResult(result: 7, length: 2)]
+        )
     }
 }

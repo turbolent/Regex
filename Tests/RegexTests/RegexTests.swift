@@ -7,14 +7,14 @@ final class RegexTests: XCTestCase {
         XCTAssertEqual(
             HashableInstruction.atom("a", .accept(1))
                 .match(["a"]),
-            [1]
+            [MatchResult(result: 1, length: 1)]
         )
 
         let pattern = HashableInstruction.atom("a", .atom("b", .accept(1)))
 
         XCTAssertEqual(
             pattern.match(["a", "b"]),
-            [1]
+            [MatchResult(result: 1, length: 2)]
         )
 
         XCTAssertEqual(
@@ -24,7 +24,7 @@ final class RegexTests: XCTestCase {
 
         XCTAssertEqual(
             pattern.match(["a", "b", "c"]),
-            [1]
+            [MatchResult(result: 1, length: 2)]
         )
     }
 
@@ -42,12 +42,12 @@ final class RegexTests: XCTestCase {
 
         XCTAssertEqual(
             pattern.match(["a", "b"]),
-            [1]
+            [MatchResult(result: 1, length: 2)]
         )
 
         XCTAssertEqual(
             pattern.match(["a", "c"]),
-            [2]
+            [MatchResult(result: 2, length: 2)]
         )
     }
 
@@ -61,7 +61,7 @@ final class RegexTests: XCTestCase {
         XCTAssertEqual(
             HashableInstruction.atom("a", .atom("b", .atom("c", .atEnd(.accept(1)))))
                 .match(["a", "b", "c"]),
-            [1]
+            [MatchResult(result: 1, length: 3)]
         )
     }
 
@@ -82,12 +82,12 @@ final class RegexTests: XCTestCase {
 
         XCTAssertEqual(
             pattern.match(["a", "b", "c"]),
-            [1]
+            [MatchResult(result: 1, length: 3)]
         )
 
         XCTAssertEqual(
             pattern.match(["a", "x", "y"]),
-            [2]
+            [MatchResult(result: 2, length: 3)]
         )
     }
 
@@ -105,12 +105,23 @@ final class RegexTests: XCTestCase {
         // NOTE: greedy by default
         XCTAssertEqual(
             Set(pattern.match(["a", "b"])),
-            Set([1, 2, 3, 4, 5])
+            Set([
+                MatchResult(result: 1, length: 1),
+                MatchResult(result: 2, length: 1),
+                MatchResult(result: 3, length: 2),
+                MatchResult(result: 4, length: 1),
+                MatchResult(result: 5, length: 1),
+            ])
         )
 
         XCTAssertEqual(
             Set(pattern.match(["a", "b"], greedy: false)),
-            Set([1, 2, 4, 5])
+            Set([
+                MatchResult(result: 1, length: 1),
+                MatchResult(result: 2, length: 1),
+                MatchResult(result: 4, length: 1),
+                MatchResult(result: 5, length: 1),
+            ])
         )
     }
 }

@@ -79,7 +79,8 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
         }
     }
 
-    public func match<S: Sequence>(_ values: S, greedy: Bool = true) -> [Result]
+    public func match<S: Sequence>(_ values: S, greedy: Bool = true)
+        -> [MatchResult<Result>]
         where S.Element == Value
     {
         var currentThreads: [Instruction] = []
@@ -90,8 +91,9 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
         // NOTE: can't use for-loop, as last iteration needs to be value == nil
         var valueIterator = values.makeIterator()
         var nextValue = valueIterator.next()
+        var valueIndex = 0
 
-        var results: [Result] = []
+        var results: [MatchResult<Result>] = []
 
         while !currentThreads.isEmpty {
 
@@ -105,12 +107,21 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
                 let instruction = currentThreads[threadIndex]
 
                 switch instruction.evaluate(value: value) {
+
                 case let .resume(.next, instructions):
                     newThreads.append(contentsOf: instructions)
+
                 case let .resume(.current, instructions):
                     currentThreads.append(contentsOf: instructions)
+
                 case let .result(result):
-                    results.append(result)
+                    results.append(
+                        MatchResult(
+                            result: result,
+                            length: valueIndex
+                        )
+                    )
+
                 case .end:
                     break
                 }
@@ -126,13 +137,13 @@ public indirect enum Instruction<Value, Matcher, Keyer, Result>
 
             swap(&currentThreads, &newThreads)
             newThreads.removeAll()
+
+            valueIndex += 1
         }
 
         return results
     }
 }
-
-
 
 
 extension Instruction: Equatable
